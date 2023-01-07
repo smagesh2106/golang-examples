@@ -7,14 +7,15 @@ import (
 func recur(i int) {
 	if i == 0 {
 		//fmt.Println(i)
-		fmt.Println("==================")
+		fmt.Println("+++>", i)
 		return
 	}
 	fmt.Println("--->", i)
 	recur(i - 1)
 	fmt.Println("===>", i)
+	//recur(i - 1)
 }
 
 func main() {
-	recur(10)
+	recur(3)
 }

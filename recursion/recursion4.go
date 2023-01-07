@@ -8,7 +8,7 @@ func main() {
 	print1(1)
 	fmt.Println("================")
 	print(1)
-	fmt.Println("================")
+	fmt.Println("++++++++++++++++")
 	fmt.Println(cache)
 	fmt.Println(fibb(92))
 }
@@ -31,6 +31,7 @@ func print(n int) {
 	}
 	fmt.Println(n)
 	print(n + 1)
+
 }
 
 func fibb(n int64) int64 {
