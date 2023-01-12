@@ -3,6 +3,7 @@ package main
 import "fmt"
 
 func permutate(a []rune, i int) {
+
 	if i > len(a) {
 		fmt.Println(string(a))
 		return
