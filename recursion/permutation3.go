@@ -16,6 +16,6 @@ func permutate3(a []rune, l int, r int) {
 }
 
 func main() {
-	a := []rune("abcde")
+	a := []rune("abcd")
 	permutate3(a, 0, len(a)-1)
 }

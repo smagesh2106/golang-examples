@@ -89,23 +89,26 @@ func (stack *Stack) Print() {
 }
 
 func permutate2(a []rune, l int, callStack *Stack) {
+	//callStack.Push(fmt.Sprintf("++++++++++++>>  a = %s, i = %d,  l = %d\n", string(a), -1, l))
 
 	if l == len(a) {
-		fmt.Println(string(a))
-		callStack.Pop()
-		callStack.Print()
-
+		/*
+			fmt.Println("+++++++++++++++++++++++++++++++++++++++++++++++")
+			callStack.Print()
+			callStack.Pop()
+			fmt.Println("+++++++++++++++++++++++++++++++++++++++++++++++", string(a))
+			callStack.Print()
+		*/
+		fmt.Println("+++++++++++++++++++++++++++++++++++++++++++++++", string(a))
 		return
 	}
 	for i := l; i < len(a); i++ {
-		callStack.Push(fmt.Sprintf("----------->>  a = %s, i = %d,  l = %d\n", string(a), i, l))
+		fmt.Printf("------1----->>  a = %s, i = %d,  l = %d\n", string(a), i, l)
 		a[i], a[l] = a[l], a[i]
 		permutate2(a, l+1, callStack)
 		a[i], a[l] = a[l], a[i]
+		fmt.Printf("------2----->>  a = %s, i = %d,  l = %d\n", string(a), i, l)
 	}
-	//callStack.Pop()
-	//callStack.Print()
-
 }
 
 var mystack *Stack
