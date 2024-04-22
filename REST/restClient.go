@@ -76,6 +76,11 @@ func (c *Client) CreateUser(requestBody *RequestBody) (*ResponseBody, error) {
 func (c *Client) GetUser(id string) (*ResponseBody2, error) {
 	var err error = nil
 	var resp *http.Response = nil
+	client := &http.Client{}
+
+	req, _ := http.NewRequest("GET", "https://reqres.in/api/users/2", nil)
+	req.Header.Add("Accept", "application/json")
+	//resp, err = client.Do(req)
 
 	url := fmt.Sprintf("%s:%d/api/users/%s", c.BaseURL, c.BasePORT, id)
 	fmt.Println(url)
@@ -85,7 +90,8 @@ func (c *Client) GetUser(id string) (*ResponseBody2, error) {
 
 	//retry until timeout
 	for tries := 0; time.Now().Before(deadLine); tries++ {
-		if resp, err = http.Get(url); err == nil {
+		//if resp, err = http.Get(url); err == nil {
+		if resp, err = client.Do(req); err == nil {
 			defer resp.Body.Close()
 			break
 		}
