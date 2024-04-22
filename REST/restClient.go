@@ -3,8 +3,10 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"time"
 )
 
 type Client struct {
@@ -72,13 +74,29 @@ func (c *Client) CreateUser(requestBody *RequestBody) (*ResponseBody, error) {
 }
 
 func (c *Client) GetUser(id string) (*ResponseBody2, error) {
+	var err error = nil
+	var resp *http.Response = nil
+
 	url := fmt.Sprintf("%s:%d/api/users/%s", c.BaseURL, c.BasePORT, id)
 	fmt.Println(url)
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, err
+
+	timeOut := 3 * time.Second
+	deadLine := time.Now().Add(timeOut)
+
+	//retry until timeout
+	for tries := 0; time.Now().Before(deadLine); tries++ {
+		if resp, err = http.Get(url); err == nil {
+			defer resp.Body.Close()
+			break
+		}
+		fmt.Println("Error getting user:", err)
+		time.Sleep(500 * time.Millisecond)
 	}
-	defer resp.Body.Close()
+
+	if resp == nil || err != nil {
+		return nil, errors.New("Timeout")
+	}
+
 	var responseBody ResponseBody2
 	err = json.NewDecoder(resp.Body).Decode(&responseBody)
 	if err != nil {
