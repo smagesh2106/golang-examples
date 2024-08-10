@@ -16,8 +16,8 @@ func main() {
 	//Both context.Background() and context.TODO() creates empty context.
 	// If you’re unsure which one to use, context.Background is a good default option
 
-	//ctx := context.Background()
-	ctx := context.TODO()
+	ctx := context.Background()
+	//ctx := context.TODO()
 	ctx = context.WithValue(ctx, "my-key", "my-value")
 	do1(ctx)
 	ctx = context.WithValue(ctx, "my-key2", "my-value2")

@@ -50,13 +50,21 @@ type userActions interface {
 }
 
 func (c *Client) CreateUser(requestBody *RequestBody) (*ResponseBody, error) {
-	url := fmt.Sprintf("%s:%d/api/users", c.BaseURL, c.BasePORT)
+	path := "/api/users"
+
+	url := fmt.Sprintf("%s:%d%s", c.BaseURL, c.BasePORT, path)
 	requestBodyBytes, err := json.Marshal(requestBody)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(requestBodyBytes))
+	client := &http.Client{}
+	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(requestBodyBytes))
+	req.Header.Add("Accept", "application/json")
+	req.Header.Add("Content-Type", "application/json")
+	resp, err := client.Do(req)
+
+	//resp, err := http.Post(url, "application/json", bytes.NewBuffer(requestBodyBytes))
 	if err != nil {
 		return nil, err
 	}
@@ -77,13 +85,15 @@ func (c *Client) GetUser(id string) (*ResponseBody2, error) {
 	var err error = nil
 	var resp *http.Response = nil
 	client := &http.Client{}
+	path := "/api/users/2"
 
-	req, _ := http.NewRequest("GET", "https://reqres.in/api/users/2", nil)
+	urlPath := fmt.Sprintf("%s:%d%s", c.BaseURL, c.BasePORT, path)
+	req, _ := http.NewRequest("GET", urlPath, nil)
 	req.Header.Add("Accept", "application/json")
 	//resp, err = client.Do(req)
 
-	url := fmt.Sprintf("%s:%d/api/users/%s", c.BaseURL, c.BasePORT, id)
-	fmt.Println(url)
+	//url := fmt.Sprintf("%s:%d/api/users/%s", c.BaseURL, c.BasePORT, id)
+	//fmt.Println(url)
 
 	timeOut := 3 * time.Second
 	deadLine := time.Now().Add(timeOut)
@@ -116,7 +126,8 @@ func (c *Client) GetUser(id string) (*ResponseBody2, error) {
 func main() {
 
 	client := &Client{
-		BaseURL:  "https://reqres.in",
+		BaseURL: "https://reqres.in",
+
 		BasePORT: 443,
 	}
 	/*
@@ -157,7 +168,7 @@ func main() {
 		return
 	}
 
-	fmt.Println("Response message:", responseBody.CreatedAt)
+	fmt.Println("Response (POST) message:", responseBody.CreatedAt)
 
 	responseBody2, err := client.GetUser("2")
 	if err != nil {
@@ -165,5 +176,5 @@ func main() {
 		return
 	}
 
-	fmt.Println("Response message: ", responseBody2.Data.Email)
+	fmt.Println("Response (GET) message: ", responseBody2.Data.Email)
 }
