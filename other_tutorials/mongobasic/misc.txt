@@ -1,0 +1,138 @@
+/*
+	var pingPipe = make(chan string)
+	go func() {
+		for {
+			select {
+			case <-pingPipe:
+				//fmt.Println(msg)
+			}
+		}
+	}()
+*/
+//go func(ch chan<- string) {
+/*
+	go func() {
+		for {
+			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+			client, _ = mongo.Connect(ctx, options.Client())
+			err := client.Ping(ctx, nil)
+
+			if err != nil {
+				logger.Printf("mongo connection error %v\n", err)
+				//ch <- fmt.Sprintf("mongo connection error %v\n", err)
+			}
+			cancel()
+
+		}
+	}()
+*/
+//}(pingPipe)
+
+/*
+func main() {
+	fmt.Println("mongo basics")
+	//ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+
+	options.Client().ApplyURI("mongodb://localhost:27017")
+
+		go func() {
+			var flag bool = false
+			defer func() {
+				if r := recover(); r != nil {
+					flag = true
+					fmt.Println("Recovered  %v", r)
+				}
+			}()
+
+			messages := make(chan string)
+
+			go func() {
+				fmt.Println("Entering loop function")
+				for {
+					fmt.Println("waiting for messages...")
+					s := <-messages
+					if s != "Connected" {
+						fmt.Printf("%s\n", s)
+
+					} else {
+						fmt.Printf("\t\t%v\n", s)
+						break
+						fmt.Println("Breaked loop...")
+					}
+				}
+				fmt.Println("exiting loop function.")
+			}()
+			WaitForMongoConnection(messages)
+		}()
+		var e interface{}
+		client, e = mongo.Connect(ctx, options.Client())
+		if e != nil {
+			fmt.Printf("%v", e)
+		}
+	ctx, _ := context.WithTimeout(context.Background(), 3*time.Second)
+	client, _ = mongo.Connect(ctx, options.Client())
+	err1 := client.Ping(ctx, nil)
+	if err1 != nil {
+		fmt.Println("mongo connection error %v", err1)
+	}
+
+	router := mux.NewRouter()
+	fmt.Println("setting router....")
+	router.HandleFunc("/person", CreatePersonEndPoint).Methods("POST")
+	router.HandleFunc("/person/{id}", DeletePersonEndPoint).Methods("DELETE")
+	router.HandleFunc("/people", GetPeopleEndPoint).Methods("GET")
+	router.HandleFunc("/people/{id}", GetPersonEndPoint).Methods("GET")
+	http.ListenAndServe(":8080", router)
+	fmt.Println("Done")
+}
+*/
+/*
+func monitorConnection(sql *SQL, engine string, url string) {
+    var err error
+
+    for {
+        err = sql.engine.Ping()
+        if err != nil {
+            refresh(sql, engine, url)
+        }
+        time.Sleep(time.Duration(1000) * time.Millisecond)
+    }
+}
+*/
+
+/*
+func WaitForMongoConnection(ch chan<- string) {
+	panic("testing")
+	const timeout = 10 * time.Second
+	deadline := time.Now().Add(timeout)
+	var flag bool = false
+	for {
+		if flag {
+			break
+		}
+		for tries := 0; time.Now().Before(deadline); tries++ {
+
+			//var e interface{}
+			ctx, _ := context.WithTimeout(context.Background(), 3*time.Second)
+			client, _ = mongo.Connect(ctx, options.Client())
+			err1 := client.Ping(ctx, nil)
+			//ch <- fmt.Sprintf("Err : %v", err1)
+			if err1 == nil {
+				flag = true
+				ch <- "Connected"
+			} else {
+				ch <- fmt.Sprintf("Connection failed , retrying...")
+				time.Sleep(time.Second << uint(tries)) //exponential back-off
+			}
+		}
+		if !flag {
+			deadline = time.Now().Add(timeout)
+			ch <- fmt.Sprintf("Failed :  mongo connection failed to respond after %s", timeout)
+		}
+	}
+	fmt.Println("Before Closing channel...")
+	close(ch)
+	fmt.Println("After Closing channel...")
+}
+
+*/

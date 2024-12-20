@@ -1,0 +1,263 @@
+---
+swagger: "2.0"
+info:
+  description: "This is a sample server User server.  You can find out more about\
+    \     Swagger at [http://swagger.io](http://swagger.io) or on [irc.freenode.net,\
+    \ #swagger](http://swagger.io/irc/).      For this sample, you can use the api\
+    \ key `special-key` to test the authorization     filters."
+  version: "1.0.0"
+  title: "Swagger User store"
+  license:
+    name: "Apache 2.0"
+    url: "http://www.apache.org/licenses/LICENSE-2.0.html"
+host: "localhost:8080"
+basePath: "/v2"
+tags:
+- name: "user"
+  description: "Operations about user"
+schemes:
+- "https"
+- "http"
+paths:
+  /user:
+    post:
+      tags:
+      - "user"
+      summary: "Create user"
+      description: "This can only be done by the logged in user."
+      operationId: "createUser"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "Created user object"
+        required: true
+        schema:
+          $ref: "#/definitions/User"
+        x-exportParamName: "Body"
+      responses:
+        default:
+          description: "successful operation"
+  /user/createWithArray:
+    post:
+      tags:
+      - "user"
+      summary: "Creates list of users with given input array"
+      description: ""
+      operationId: "createUsersWithArrayInput"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "List of user object"
+        required: true
+        schema:
+          type: "array"
+          items:
+            $ref: "#/definitions/User"
+        x-exportParamName: "Body"
+      responses:
+        default:
+          description: "successful operation"
+  /user/createWithList:
+    post:
+      tags:
+      - "user"
+      summary: "Creates list of users with given input array"
+      description: ""
+      operationId: "createUsersWithListInput"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "List of user object"
+        required: true
+        schema:
+          type: "array"
+          items:
+            $ref: "#/definitions/User"
+        x-exportParamName: "Body"
+      responses:
+        default:
+          description: "successful operation"
+  /users:
+    get:
+      tags:
+      - "user"
+      summary: "Get user by user id"
+      description: ""
+      operationId: "getUsers"
+      produces:
+      - "application/json"
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/User"
+        "400":
+          description: "Invalid username supplied"
+        "404":
+          description: "User not found"
+
+  /user/{id}:
+    get:
+      tags:
+      - "user"
+      summary: "Get user by user id"
+      description: ""
+      operationId: "getUserById"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "id"
+        in: "path"
+        description: "The hex user id  that needs to be fetched. "
+        required: true
+        type: "string"
+        x-exportParamName: "Id"
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/User"
+        "400":
+          description: "Invalid username supplied"
+        "404":
+          description: "User not found"
+    put:
+      tags:
+      - "user"
+      summary: "Updated user"
+      description: "This can only be done by the logged in user."
+      operationId: "updateUserById"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "id"
+        in: "path"
+        description: "name that need to be updated"
+        required: true
+        type: "string"
+        x-exportParamName: "Id"
+      - in: "body"
+        name: "body"
+        description: "Updated user object"
+        required: true
+        schema:
+          $ref: "#/definitions/User"
+        x-exportParamName: "Body"
+      responses:
+        "400":
+          description: "Invalid user supplied"
+        "404":
+          description: "User not found"
+    delete:
+      tags:
+      - "user"
+      summary: "Delete user"
+      description: "This can only be done by the logged in user."
+      operationId: "deleteUserById"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "id"
+        in: "path"
+        description: "The name that needs to be deleted"
+        required: true
+        type: "string"
+        x-exportParamName: "Id"
+      responses:
+        "400":
+          description: "Invalid username supplied"
+        "404":
+          description: "User not found"
+  /findByAgeQuery:
+    get:
+      tags:
+      - "user"
+      summary: "Get user by user age"
+      description: ""
+      operationId: "findByAgeQuery"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "min"
+        in: "query"
+        description: "minimum age of the user "
+        required: true
+        type: "integer"
+        x-exportParamName: "Min"
+      - name: "max"
+        in: "query"
+        description: "maximum age of the user "
+        required: true
+        type: "integer"
+        x-exportParamName: "Max"
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/User"
+        "400":
+          description: "Invalid user age supplied supplied"
+        "404":
+          description: "User not found"
+  /findByAgeHeader:
+    get:
+      tags:
+      - "user"
+      summary: "Get user by user age"
+      description: ""
+      operationId: "findByAgeHeader"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "X-Min-Age"
+        in: "header"
+        description: "minimum age of the user "
+        required: true
+        type: "integer"
+        x-exportParamName: "XMinAge"
+      - name: "X-Max-Age"
+        in: "header"
+        description: "maximum age of the user "
+        required: true
+        type: "integer"
+        x-exportParamName: "XMaxAge"
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/User"
+        "400":
+          description: "Invalid user age supplied supplied"
+        "404":
+          description: "User not found"
+definitions:
+  User:
+    type: "object"
+    properties:
+      _id:
+        type: "string"
+      username:
+        type: "string"
+      firstName:
+        type: "string"
+      lastName:
+        type: "string"
+      email:
+        type: "string"
+      password:
+        type: "string"
+      phone:
+        type: "string"
+      age:
+        type: "integer"
+      userStatus:
+        type: "integer"
+        format: "int32"

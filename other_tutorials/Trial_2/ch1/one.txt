@@ -1,0 +1,7 @@
+goat
+goat
+cow
+cow
+cow
+dog
+cat
