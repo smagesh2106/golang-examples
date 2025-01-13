@@ -25,6 +25,7 @@ func do4(ctx context.Context, ch <-chan int) {
 func do3(ctx context.Context) {
 	ctx, cancel := context.WithCancel(ctx)
 	ch := make(chan int)
+	//defer cancel()
 	go do4(ctx, ch)
 	for num := 1; num < 10; num++ {
 		ch <- num
