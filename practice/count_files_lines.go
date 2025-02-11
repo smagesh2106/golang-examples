@@ -8,7 +8,7 @@ import (
 	"syscall"
 )
 
-func main3() {
+func main() {
 	counts := make(map[string]int)
 	files := os.Args[1:]
 	fmt.Println(files)
