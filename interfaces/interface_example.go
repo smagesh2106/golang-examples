@@ -34,6 +34,11 @@ func (c Circle) Perimeter() float64 {
 	return 2 * math.Pi * c.Radius
 }
 
+type MultiStruct struct {
+	Object   *Shape
+	Function func(int) int
+}
+
 func main() {
 	var s Shape = Circle{Radius: 5.0}
 	fmt.Printf("Area of a Circle :%.2f\n", s.Area())
@@ -42,4 +47,27 @@ func main() {
 	s = Rectangle{Length: 3.0, Width: 4.0}
 	fmt.Printf("Area of a Rectable :%v\n", s.Area())
 	fmt.Printf("Perimeter of a Rectangle :%v\n", s.Perimeter())
+
+	var ms = MultiStruct{
+		Object: &Circle{Radius: 5},
+		Function: func(i int) int {
+			return i * i
+		},
+	}
+	obj1 := ms.Object
+	fmt.Printf("----> Area :%v \n", (*obj1).Area())
+	fmt.Printf("----> Perimeter :%v \n", (*ms.Object).Perimeter())
+	fmt.Printf("----> Square :%v \n\n", ms.Function(6))
+
+	ms = MultiStruct{
+		Object: &Rectangle{Length: 10, Width: 8},
+		Function: func(i int) int {
+			return i / 2
+		},
+	}
+
+	fmt.Printf("----> Area :%v \n", (*ms.Object).Area())
+	fmt.Printf("----> Perimeter :%v \n", (*ms.Object).Perimeter())
+	fmt.Printf("----> Half :%v \n", ms.Function(6))
+
 }
