@@ -42,6 +42,9 @@ label:
 			return
 		}
 		if string(msg) == "bye" {
+			if err := conn.WriteMessage(websocket.TextMessage, []byte("goodbye client..")); err != nil {
+				//ignore
+			}
 			stopCh <- struct{}{}
 			break label
 
