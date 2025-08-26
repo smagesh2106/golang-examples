@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/godbus/dbus/v5"
+	dbus "github.com/godbus/dbus/v5"
 )
 
 const serviceName2 = "com.example.GolangDBus"
@@ -14,12 +14,13 @@ const objectPath2 = "/com/example/GolangDBusObject"
 const interfaceName2 = "com.example.GolangDBus"
 
 func main() {
-	// Connect to the system bus
-	conn, err := dbus.SystemBus()
+	// Connect to the session bus
+	conn, err := dbus.ConnectSessionBus()
 	if err != nil {
 		log.Fatalf("Failed to connect to the DBus: %v", err)
 		os.Exit(1)
 	}
+	defer conn.Close()
 
 	// Call the Hello method
 	call := conn.Object(serviceName2, objectPath2).Call(interfaceName2+".Hello", 0)
@@ -35,5 +36,5 @@ func main() {
 		log.Fatalf("Failed to store response: %v", err)
 	}
 
-	fmt.Println("Received response:", response)
+	fmt.Println("📩 Received response:", response)
 }

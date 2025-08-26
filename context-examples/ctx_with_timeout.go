@@ -30,16 +30,18 @@ func do5(ctx context.Context) {
 
 	ch := make(chan int)
 	go do6(ctx, ch)
+
+loop:
 	for num := 1; num <= 10; num++ {
 		select {
 		case ch <- num:
-			time.Sleep(500 * time.Millisecond)
+			time.Sleep(1 * time.Second)
 		case <-ctx.Done():
-			break
+			break loop
 		}
 	}
 	//cancel()
-	time.Sleep(5000 * time.Millisecond)
+	//time.Sleep(5000 * time.Millisecond)
 	fmt.Println("do5 Finished")
 }
 

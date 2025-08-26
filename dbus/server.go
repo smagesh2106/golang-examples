@@ -3,41 +3,63 @@ package main
 
 import (
 	"fmt"
+	"log"
 
-	"github.com/godbus/dbus/v5"
+	dbus "github.com/godbus/dbus/v5"
+	introspect "github.com/godbus/dbus/v5/introspect"
 )
 
-const serviceName = "org.freedesktop.DBus2"
-const objectPath = "/org/freedesktop/DBus2"
-const interfaceName = "org.freedesktop.DBus2"
+const serviceName = "com.example.GolangDBus"
+const objectPath = "/com/example/GolangDBusObject"
+const interfaceName = "com.example.GolangDBus"
 
+// HelloService exposes methods on DBus
 type HelloService struct{}
 
-func (h *HelloService) Hello() string {
-	return "Hello from DBus Server!"
+// Hello method implementation
+func (s *HelloService) Hello() (string, *dbus.Error) {
+	return "Hello <<<>>>> from Go D-Bus service!", nil
 }
 
 func main() {
-	conn, err := dbus.SystemBus()
+	// Connect to the session bus
+	conn, err := dbus.ConnectSessionBus()
 	if err != nil {
-		fmt.Println("Error listening for DBus name:", err)
-		panic(err)
+		log.Fatal("Failed to connect to session bus:", err)
 	}
 	defer conn.Close()
 
+	// Request a well-known name
 	reply, err := conn.RequestName(serviceName, dbus.NameFlagDoNotQueue)
 	if err != nil {
-		panic(err)
+		log.Fatal("Failed to request name:", err)
 	}
 	if reply != dbus.RequestNameReplyPrimaryOwner {
-		fmt.Println("Name already taken")
-		return
+		log.Fatal("Name already taken")
 	}
-	// Register object path with Hello method
-	conn.Export(new(HelloService), objectPath, interfaceName)
 
-	// Wait for incoming DBus requests
-	fmt.Println("Server running...")
+	// Export the service (object + interface)
+	hello := &HelloService{}
+	conn.Export(hello, objectPath, interfaceName)
 
-	select {}
+	// Export introspection data (so clients can query it)
+	node := &introspect.Node{
+		Name: string(objectPath),
+		Interfaces: []introspect.Interface{
+			introspect.IntrospectData,
+			{
+				Name: interfaceName,
+				Methods: []introspect.Method{
+					{Name: "Hello", Args: []introspect.Arg{
+						{Name: "response", Type: "s", Direction: "out"},
+					}},
+				},
+			},
+		},
+	}
+	conn.Export(introspect.NewIntrospectable(node), objectPath,
+		"org.freedesktop.DBus.Introspectable")
+
+	fmt.Println("✅ D-Bus service running... Press Ctrl+C to exit")
+	select {} // block forever
 }

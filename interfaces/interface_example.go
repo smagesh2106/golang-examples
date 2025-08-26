@@ -35,7 +35,7 @@ func (c Circle) Perimeter() float64 {
 }
 
 type MultiStruct struct {
-	Object   *Shape
+	Object   Shape
 	Function func(int) int
 }
 
@@ -55,8 +55,8 @@ func main() {
 		},
 	}
 	obj1 := ms.Object
-	fmt.Printf("----> Area :%v \n", (*obj1).Area())
-	fmt.Printf("----> Perimeter :%v \n", (*ms.Object).Perimeter())
+	fmt.Printf("----> Area :%v \n", obj1.Area())
+	fmt.Printf("----> Perimeter :%v \n", ms.Object.Perimeter())
 	fmt.Printf("----> Square :%v \n\n", ms.Function(6))
 
 	ms = MultiStruct{
@@ -66,8 +66,8 @@ func main() {
 		},
 	}
 
-	fmt.Printf("----> Area :%v \n", (*ms.Object).Area())
-	fmt.Printf("----> Perimeter :%v \n", (*ms.Object).Perimeter())
+	fmt.Printf("----> Area :%v \n", ms.Object.Area())
+	fmt.Printf("----> Perimeter :%v \n", ms.Object.Perimeter())
 	fmt.Printf("----> Half :%v \n", ms.Function(6))
 
 }

@@ -6,10 +6,10 @@ import (
 )
 
 func do1(ctx context.Context) {
-	fmt.Printf("do something key/value,  key:%s\n", ctx.Value("my-key"))
+	fmt.Printf("do something key/value,  key: my-key, value:%s\n", ctx.Value("my-key"))
 }
 func do2(ctx context.Context) {
-	fmt.Printf("do something key/value,  key:%s\n", ctx.Value("my-key2"))
+	fmt.Printf("do something key/value,  key: my-key2, value: %s\n", ctx.Value("my-key2"))
 }
 
 func main() {

@@ -29,6 +29,7 @@ func do3(ctx context.Context) {
 	go do4(ctx, ch)
 	for num := 1; num < 10; num++ {
 		ch <- num
+		time.Sleep(100 * time.Millisecond)
 	}
 	cancel()
 	time.Sleep(3 * time.Second)
