@@ -17,7 +17,7 @@ func makeRequest(url string, i int) (result string, err error) {
 	}()
 
 	client := http.Client{
-		Timeout: 2 * time.Second, // request timeout
+		Timeout: 3 * time.Second, // request timeout
 	}
 
 	resp, err := client.Get(url)
