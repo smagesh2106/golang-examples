@@ -26,19 +26,25 @@ func GetConfig() *NxoConfig {
 	if Config == nil {
 		Config = &NxoConfig{}
 	}
+	//<FIXME> - Change the path to env variable or config map
 	Config.CertificatePath = "/tmp/ca/"
+	Config.CaCert = Config.CertificatePath + "ca.crt"
+	Config.ClientCert = Config.CertificatePath + "client.crt"
+	Config.ClientKey = Config.CertificatePath + "client.key"
+	Config.ServerCert = Config.CertificatePath + "server.crt"
+	Config.ServerKey = Config.CertificatePath + "server.key"
 
 	Config.TLSVerify = false
 	if val, ok := os.LookupEnv("NXO_TLS_VERIFY"); ok && (strings.ToLower(val) == "true") {
 		Config.TLSVerify = true
 	}
-	serverConfig, err := utils.GetTLServerConfig(Config.CertificatePath, Config.TLSVerify)
+	serverConfig, err := utils.GetTLServerConfig(Config.ServerCert, Config.ServerKey, Config.CaCert, Config.TLSVerify)
 	if err != nil {
 		log.Fatalf("Error getting TLS server config: %v", err)
 	}
 
 	Config.TLSServerConfig = serverConfig
-	clientConfig, err := utils.GetTlsClientConfig(Config.CertificatePath, Config.TLSVerify)
+	clientConfig, err := utils.GetTlsClientConfig(Config.ClientCert, Config.ClientKey, Config.CaCert, Config.TLSVerify)
 	if err != nil {
 		log.Fatalf("Error getting TLS client config: %v", err)
 	}
@@ -51,7 +57,12 @@ func GetConfig() *NxoConfig {
 // Create a new service instance
 // ------------------------------------------------------------------------
 func GetNewNxoService(installType string, cred string, host string, port string) *NxoService {
-	return &NxoService{InstallType: installType, OrgCred: cred, OrgHost: host, OrgPort: port}
+	return &NxoService{
+		InstallType: installType,
+		OrgCred:     cred,
+		OrgHost:     host,
+		OrgPort:     port,
+	}
 }
 
 // ------------------------------------------------------------------------
@@ -110,13 +121,13 @@ func (h *NxoService) Start() error {
 	})
 
 	h.Server = &http.Server{
-		Addr:    addr,
-		Handler: mux,
-		//TLSConfig: h.NxoConfig.TLSServerConfig,
+		Addr:      addr,
+		Handler:   mux,
+		TLSConfig: h.NxoConfig.TLSServerConfig,
 	}
 
 	log.Printf("Service starting on %s", addr)
-	return h.Server.ListenAndServe()
+	return h.Server.ListenAndServeTLS(h.NxoConfig.ServerCert, h.NxoConfig.ServerKey)
 }
 
 // ------------------------------------------------------------------------

@@ -17,6 +17,11 @@ type NxoServiceIntf interface {
 
 type NxoConfig struct {
 	CertificatePath string
+	CaCert          string
+	ClientCert      string
+	ClientKey       string
+	ServerCert      string
+	ServerKey       string
 	TLSVerify       bool
 	//TLSConfig 		 func() (*tls.Config, error)
 	TLSServerConfig *tls.Config

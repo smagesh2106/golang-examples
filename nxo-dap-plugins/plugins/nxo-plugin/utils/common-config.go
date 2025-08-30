@@ -3,39 +3,62 @@ package utils
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"log"
+	"fmt"
 	"os"
 )
 
-func basicConfig(certPath string, keyPath string, caCertPath string) (*tls.Certificate, *x509.CertPool) {
+// ------------------------------------------------------------------------
+// Basic TLS Config
+// ------------------------------------------------------------------------
+func basicConfig(certPath string, keyPath string, caCertPath string) (*tls.Certificate, *x509.CertPool, error) {
+
+	// Validate file paths
+	if _, err := os.Stat(certPath); err != nil {
+		return nil, nil, fmt.Errorf("client certificate file not found: %v", err)
+	}
+	if _, err := os.Stat(keyPath); err != nil {
+		return nil, nil, fmt.Errorf("client key file not found: %v", err)
+	}
+	if _, err := os.Stat(caCertPath); err != nil {
+		return nil, nil, fmt.Errorf("CA certificate file not found: %v", err)
+	}
+
 	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
 	if err != nil {
-		log.Fatal("Failed to load server key pair:", err)
+		return nil, nil, fmt.Errorf("Failed to load key pair: %v", err)
 	}
 
 	// Load CA certificate
 	caCert, err := os.ReadFile(caCertPath)
 	if err != nil {
-		log.Fatal("Failed to read CA cert:", err)
+		return nil, nil, fmt.Errorf("Failed to load CA cert: %v", err)
 	}
 	caCertPool := x509.NewCertPool()
 	if ok := caCertPool.AppendCertsFromPEM(caCert); !ok {
-		log.Fatal("Failed to append CA cert")
+		return nil, nil, fmt.Errorf("Failed to append CA cert: %v", err)
 	}
-	return &cert, caCertPool
+	return &cert, caCertPool, nil
 }
 
-func GetTLServerConfig(path string, verify bool) (*tls.Config, error) {
-	//FIXME validate if the path and files exist, use the verify flag
-	cert, caCertPool := basicConfig(path+"/server.crt", path+"/server.key", path+"/ca.crt")
+// ------------------------------------------------------------------------
+// Get TLS Server Config
+// ------------------------------------------------------------------------
+func GetTLServerConfig(cert string, key string, cacert string, verify bool) (*tls.Config, error) {
+	tlsCert, caCertPool, err := basicConfig(cert, key, cacert)
+	if err != nil {
+		return nil, fmt.Errorf("error in ServerConfig, server certs,key,ca missing: %v", err)
+	}
 
 	verifyFlag := tls.NoClientCert
 	if verify {
 		verifyFlag = tls.RequireAndVerifyClientCert
 	}
+
 	// Configure TLS
 	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{*cert},
+		MinVersion:   tls.VersionTLS12,
+		MaxVersion:   tls.VersionTLS13,
+		Certificates: []tls.Certificate{*tlsCert},
 		ClientAuth:   verifyFlag,
 		ClientCAs:    caCertPool,
 	}
@@ -43,13 +66,18 @@ func GetTLServerConfig(path string, verify bool) (*tls.Config, error) {
 	return tlsConfig, nil
 }
 
-func GetTlsClientConfig(path string, _ bool) (*tls.Config, error) {
-	//FIXME validate if the path and files exist, use the verify flag
-	cert, caCertPool := basicConfig(path+"/client.crt", path+"/client.key", path+"/ca.crt")
+// ------------------------------------------------------------------------
+// Get TLS Client Config
+// ------------------------------------------------------------------------
+func GetTlsClientConfig(cert string, key string, cacert string, _ bool) (*tls.Config, error) {
+	tlsCert, caCertPool, err := basicConfig(cert, key, cacert)
+	if err != nil {
+		return nil, fmt.Errorf("error in ServerConfig, client certs,key,ca missing: %v", err)
+	}
 
 	// Configure TLS
 	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{*cert},
+		Certificates: []tls.Certificate{*tlsCert},
 		RootCAs:      caCertPool,
 	}
 	return tlsConfig, nil
