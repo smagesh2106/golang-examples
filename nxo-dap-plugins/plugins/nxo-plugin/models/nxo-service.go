@@ -1,6 +1,7 @@
 package models
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -70,7 +71,7 @@ func GetNewNxoService() NxoServiceIntf {
 // ------------------------------------------------------------------------
 func (h *NxoService) CallFacade(r *http.Request) error {
 	// Construct the CallFacade API URL
-	facadeURL := h.FacadeURL + r.URL.Path
+	facadeURL := h.FacadeURL
 
 	// Modify request headers and body if needed for CallFacade
 	req, err := http.NewRequest(http.MethodGet, facadeURL, nil)
@@ -80,9 +81,9 @@ func (h *NxoService) CallFacade(r *http.Request) error {
 
 	//set the credentials and headers for calling facade api
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authentication", "Basic "+h.FacadeCred)
+	req.Header.Set("Authorization", "Basic "+h.FacadeCred)
 
-	// Send the request using HTTPS client
+	// HTTPS client <FIXME> try to reuse client
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 		Transport: &http.Transport{
@@ -115,10 +116,81 @@ func (h *NxoService) CallFacade(r *http.Request) error {
 // Call iDRAC Endpoints
 // ------------------------------------------------------------------------
 func (h *NxoService) CalliDRAC(w http.ResponseWriter, r *http.Request) ([]byte, error) {
-	// Proceed with the operation, <FIXME> change to https call.
-	time.Sleep(2 * time.Second)
-	return []byte("Hello from iDRAC proxy service on port"), nil
-	//return nil, fmt.Errorf("iDRAC proxy service not implemented yet")
+	proxyURL := h.EOProxyURL + r.URL.Path
+	maxRetry := 3
+
+	// --- Prepare body (for POST/PUT etc). Read once and reuse ---
+	var bodyBytes []byte
+	if r.Body != nil {
+		var err error
+		bodyBytes, err = io.ReadAll(r.Body)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read request body: %v", err)
+		}
+		r.Body.Close()
+	}
+
+	// HTTPS client <FIXME> try to reuse client
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: h.NxoConfig.TlsClientConfig,
+		},
+	}
+
+	// Retry logic
+	for attempt := 1; attempt <= maxRetry; attempt++ {
+		// Recreate body reader each retry (safe for multiple sends)
+		var reqBody io.Reader
+		if bodyBytes != nil {
+			reqBody = bytes.NewReader(bodyBytes)
+		}
+
+		req, err := http.NewRequest(r.Method, proxyURL, reqBody)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create iDRAC proxy request: %v", err)
+		}
+
+		// Copy original headers
+		for key, values := range r.Header {
+			for _, value := range values {
+				req.Header.Add(key, value)
+			}
+		}
+		// Set iDRAC-specific headers
+		req.Header.Set("Accept", "application/json")
+		req.Header.Set("Authorization", "Basic "+h.EOProxyCred)
+
+		// Execute request
+		resp, err := client.Do(req)
+		if err != nil {
+			log.Printf("Attempt %d: request failed: %v", attempt, err)
+			time.Sleep(time.Duration(attempt*attempt) * time.Second)
+			continue
+		}
+
+		// Always close body
+		body, readErr := io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+		if readErr != nil {
+			return nil, fmt.Errorf("failed to read iDRAC response: %v", readErr)
+		}
+
+		// Retry on non-200
+		if resp.StatusCode != http.StatusOK {
+			log.Printf("Attempt %d: iDRAC returned %s - body: %s", attempt, resp.Status, string(body))
+			// Refresh FacadeMap
+			if err := h.CallFacade(r); err != nil {
+				log.Printf("Error refreshing FacadeMap: %v", err)
+			}
+			time.Sleep(time.Duration(attempt*attempt) * time.Second)
+			continue
+		}
+		// Success
+		return body, nil
+	}
+
+	return nil, fmt.Errorf("iDRAC request failed after %d attempts", maxRetry)
 }
 
 // ------------------------------------------------------------------------
@@ -190,16 +262,19 @@ func (h *NxoService) Start() error {
 			}
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			w.Write(res.data)
+			_, _ = w.Write(res.data)
 			return
 		}
-
 	})
 
 	h.Server = &http.Server{
-		Addr:      addr,
-		Handler:   mux,
-		TLSConfig: h.NxoConfig.TLSServerConfig,
+		Addr:              addr,
+		Handler:           mux,
+		TLSConfig:         h.NxoConfig.TLSServerConfig,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       120 * time.Second,
 	}
 
 	log.Printf("Service starting on %s", addr)
@@ -211,7 +286,9 @@ func (h *NxoService) Start() error {
 // ------------------------------------------------------------------------
 func (h *NxoService) Stop() error {
 	//Stop the service
-	if err := h.Server.Shutdown(context.Background()); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := h.Server.Shutdown(ctx); err != nil {
 		return fmt.Errorf("error shutting down server: %v", err)
 	}
 	return nil
