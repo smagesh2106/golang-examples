@@ -1,7 +1,6 @@
 package models
 
 import (
-	"context"
 	"crypto/tls"
 	"net/http"
 )
@@ -9,10 +8,10 @@ import (
 type NxoServiceIntf interface {
 	Init() error
 	Start() error
-	Stop()
+	Stop() error
 
-	CallFacade(ctx context.Context) error
-	CalliDRAC(ctx context.Context) error
+	CallFacade(r *http.Request) error
+	CalliDRAC(w http.ResponseWriter, r *http.Request) ([]byte, error)
 }
 
 type NxoConfig struct {
@@ -33,16 +32,21 @@ type NxoService struct {
 	InstallType string `json:"installtype" yaml:"installtype"`
 
 	//On Prem Model
-	OrgCred   string `json:"orgcred" yaml:"orgcred"`
-	OrgHost   string `json:"orghost" yaml:"orghost"`
-	OrgPort   string `json:"orgport" yaml:"orgport"`
-	FacadeURL string `json:"facadeurl" yaml:"facadeurl"`
+	FacadeCred string `json:"orgcred" yaml:"orgcred"`
+	FacadeURL  string `json:"facadeurl" yaml:"facadeurl"`
 
 	//SaaS Model
-	ProxyCred string `json:"proxycred" yaml:"proxycred"`
+	EOProxyURL  string `json:"eoproxyurl" yaml:"eoproxyurl"`
+	EOProxyCred string `json:"proxycred" yaml:"proxycred"`
 
+	//Plugin Service Port
+	PLUGINS_PORT string `json:"pluginsport" yaml:"pluginsport"`
 	//Config
 	NxoConfig *NxoConfig `json:"nxoconfig" yaml:"nxoconfig"`
 
+	// Facade Endpoints map
+	FacadeMap map[string]string `json:"facademap" yaml:"facademap"`
+
+	//HTTP Server
 	Server *http.Server
 }

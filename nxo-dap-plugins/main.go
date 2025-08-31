@@ -17,7 +17,7 @@ func main() {
 	// Here you would typically start your server, e.g., http.ListenAndServe(fmt.Sprintf("%s:%d", host, port), nil)
 
 	// Start service in goroutine
-	service := models.GetNewNxoService("onprem", "admin", host, port)
+	service := models.GetNewNxoService()
 	if err := service.Init(); err != nil {
 		log.Fatalf("Failed to initialize service: %v", err)
 	}

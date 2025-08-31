@@ -2,12 +2,15 @@ package models
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	utils "golang-examples/nxo-dap-plugins/plugins/nxo-plugin/utils"
 )
@@ -27,7 +30,7 @@ func GetConfig() *NxoConfig {
 		Config = &NxoConfig{}
 	}
 	//<FIXME> - Change the path to env variable or config map
-	Config.CertificatePath = "/tmp/ca/"
+	Config.CertificatePath = "/home/magesh/tmp/ca/"
 	Config.CaCert = Config.CertificatePath + "ca.crt"
 	Config.ClientCert = Config.CertificatePath + "client.crt"
 	Config.ClientKey = Config.CertificatePath + "client.key"
@@ -56,29 +59,66 @@ func GetConfig() *NxoConfig {
 // ------------------------------------------------------------------------
 // Create a new service instance
 // ------------------------------------------------------------------------
-func GetNewNxoService(installType string, cred string, host string, port string) *NxoService {
+func GetNewNxoService() NxoServiceIntf {
 	return &NxoService{
-		InstallType: installType,
-		OrgCred:     cred,
-		OrgHost:     host,
-		OrgPort:     port,
+		FacadeMap: make(map[string]string),
 	}
 }
 
 // ------------------------------------------------------------------------
 // Get Facade Endpoints
 // ------------------------------------------------------------------------
-func (h *NxoService) CallFacade(ctx context.Context) error {
-	//Get Endpoints
+func (h *NxoService) CallFacade(r *http.Request) error {
+	// Construct the CallFacade API URL
+	facadeURL := h.FacadeURL + r.URL.Path
+
+	// Modify request headers and body if needed for CallFacade
+	req, err := http.NewRequest(http.MethodGet, facadeURL, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create CallFacade request: %v", err)
+	}
+
+	//set the credentials and headers for calling facade api
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Authentication", "Basic "+h.FacadeCred)
+
+	// Send the request using HTTPS client
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: h.NxoConfig.TlsClientConfig,
+		},
+	}
+	resp, err := client.Do(req)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("CallFacade API failed: %v", err)
+	}
+
+	// Read and return the response body (as-is)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read CallFacade response body: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("CallFacade API returned status: %s", resp.Status)
+	}
+	//Parse and update the FacadeMap
+	if err := json.Unmarshal(body, &h.FacadeMap); err != nil {
+		return fmt.Errorf("failed to parse CallFacade response JSON: %v", err)
+	}
+	log.Printf("Facade Endpoints: %v", h.FacadeMap)
 	return nil
 }
 
 // ------------------------------------------------------------------------
 // Call iDRAC Endpoints
 // ------------------------------------------------------------------------
-func (h *NxoService) CalliDRAC(ctx context.Context) error {
-	//Call iDRAC
-	return nil
+func (h *NxoService) CalliDRAC(w http.ResponseWriter, r *http.Request) ([]byte, error) {
+	// Proceed with the operation, <FIXME> change to https call.
+	time.Sleep(2 * time.Second)
+	return []byte("Hello from iDRAC proxy service on port"), nil
+	//return nil, fmt.Errorf("iDRAC proxy service not implemented yet")
 }
 
 // ------------------------------------------------------------------------
@@ -95,16 +135,22 @@ func (h *NxoService) Init() (error error) {
 	installType := getenv("NXO_INSTALL_TYPE", "onprem")
 	h.InstallType = installType
 
-	//on prem
-	h.OrgCred = getenv("NXO_ORG_CRED", "admin")
-	//h.OrgHost = getenv("NXO_ORG_HOST", "nxo-organization")
-	//h.OrgPort = getenv("NXO_ORG_PORT", "443")
-	h.FacadeURL = getenv("NXO_FACADE_URL", fmt.Sprintf("http://%s:%s", h.OrgHost, h.OrgPort))
-	h.ProxyCred = getenv("NXO_ORG_CRED", "admin")
+	//on prem, both facade and proxy are within DSPO
+	h.FacadeCred = getenv("NXO_FACADE_CRED", "admin")
+	h.FacadeURL = getenv("NXO_FACADE_URL", "https://localhost:9000")
+	h.EOProxyCred = getenv("NXO_EOPROXY_CRED", "admin")
+	h.EOProxyURL = getenv("NXO_EOPROXY_URL", "https://localhost:9000")
 
+	//SaaS, facade url is within DSPO , iDRAC proxy is on a different url.
 	if strings.ToLower(installType) != "onprem" {
-		h.ProxyCred = getenv("NXO_PROXY_CRED", "admin")
+		h.EOProxyCred = getenv("NXO_EOPROXY_CRED", "admin")
+		h.EOProxyURL = getenv("NXO_EOPROXY_URL", "https://localhost:9001")
 	}
+
+	//Plugin Service Port
+	h.PLUGINS_PORT = getenv("NXO_PLUGINS_PORT", "8443")
+
+	//Config
 	h.NxoConfig = GetConfig()
 	return nil
 }
@@ -113,11 +159,41 @@ func (h *NxoService) Init() (error error) {
 // Start the service
 // ------------------------------------------------------------------------
 func (h *NxoService) Start() error {
-	addr := fmt.Sprintf("%s:%s", h.OrgHost, h.OrgPort)
+	addr := fmt.Sprintf("%s:%s", "0.0.0.0", h.PLUGINS_PORT)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "Hello from service on %s!", addr)
+		//fmt.Fprintf(w, "Hello from service on %s!\n", addr)
+		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		defer cancel()
+
+		type result struct {
+			data []byte
+			err  error
+		}
+
+		resultChan := make(chan result, 1)
+
+		go func() {
+			resp, err := h.CalliDRAC(w, r.WithContext(ctx))
+			resultChan <- result{data: resp, err: err}
+		}()
+
+		select {
+		case <-ctx.Done():
+			http.Error(w, "Request timed out", http.StatusGatewayTimeout)
+			return
+		case res := <-resultChan:
+			if res.err != nil {
+				http.Error(w, fmt.Sprintf("Error: %v", res.err), http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			w.Write(res.data)
+			return
+		}
+
 	})
 
 	h.Server = &http.Server{
