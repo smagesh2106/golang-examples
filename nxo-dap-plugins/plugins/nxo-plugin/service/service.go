@@ -40,7 +40,7 @@ func (h *NxoService) CallFacade(r *http.Request) error {
 
 	// HTTPS client <FIXME> try to reuse client
 	client := &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout: time.Duration(h.NxoConfig.HttpClientTimeout) * time.Second,
 		Transport: &http.Transport{
 			TLSClientConfig: h.NxoConfig.TlsClientConfig,
 		},
@@ -99,7 +99,7 @@ func (h *NxoService) CalliDRAC(w http.ResponseWriter, r *http.Request) ([]byte, 
 
 	// HTTPS client <FIXME> try to reuse client
 	client := &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout: time.Duration(h.NxoConfig.HttpClientTimeout) * time.Second,
 		Transport: &http.Transport{
 			TLSClientConfig: h.NxoConfig.TlsClientConfig,
 		},
@@ -184,7 +184,7 @@ func (h *NxoService) Start() error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		//fmt.Fprintf(w, "Hello from service on %s!\n", addr)
-		ctx, cancel := context.WithTimeout(r.Context(), time.Duration(h.NxoConfig.HttpClientTimeout)*time.Second)
+		ctx, cancel := context.WithTimeout(r.Context(), time.Duration(h.NxoConfig.HttpClientTimeout+5)*time.Second)
 		defer cancel()
 
 		type result struct {
