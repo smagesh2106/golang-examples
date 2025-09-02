@@ -71,7 +71,8 @@ func (h *NxoService) CallFacade(r *http.Request) error {
 // Call iDRAC Endpoints
 // ------------------------------------------------------------------------
 func (h *NxoService) CalliDRAC(w http.ResponseWriter, r *http.Request) ([]byte, error) {
-	return []byte("Hello from Nxo proxy client"), nil
+	return []byte("Hello from Nxo proxy client"), nil //<FIXME> remove
+
 	var proxyURL string
 	var cred string
 	// Determine the iDRAC proxy URL Install type
