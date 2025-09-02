@@ -1,61 +1,16 @@
-package models
+package service
 
 import (
 	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"golang-examples/nxo-dap-plugins/plugins/nxo-plugin/configs"
 	"io"
 	"log"
 	"net/http"
-	"os"
-	"strings"
-	"sync"
 	"time"
-
-	utils "golang-examples/nxo-dap-plugins/plugins/nxo-plugin/utils"
 )
-
-var (
-	Config *NxoConfig
-	mu     sync.Mutex
-)
-
-// ------------------------------------------------------------------------
-// Get Configuration
-// ------------------------------------------------------------------------
-func GetConfig() *NxoConfig {
-	mu.Lock()
-	defer mu.Unlock()
-	if Config == nil {
-		Config = &NxoConfig{}
-	}
-	//<FIXME> - Change the path to env variable or config map
-	Config.CertificatePath = "/home/magesh/tmp/ca/"
-	Config.CaCert = Config.CertificatePath + "ca.crt"
-	Config.ClientCert = Config.CertificatePath + "client.crt"
-	Config.ClientKey = Config.CertificatePath + "client.key"
-	Config.ServerCert = Config.CertificatePath + "server.crt"
-	Config.ServerKey = Config.CertificatePath + "server.key"
-
-	Config.TLSVerify = false
-	if val, ok := os.LookupEnv("NXO_TLS_VERIFY"); ok && (strings.ToLower(val) == "true") {
-		Config.TLSVerify = true
-	}
-	serverConfig, err := utils.GetTLServerConfig(Config.ServerCert, Config.ServerKey, Config.CaCert, Config.TLSVerify)
-	if err != nil {
-		log.Fatalf("Error getting TLS server config: %v", err)
-	}
-
-	Config.TLSServerConfig = serverConfig
-	clientConfig, err := utils.GetTlsClientConfig(Config.ClientCert, Config.ClientKey, Config.CaCert, Config.TLSVerify)
-	if err != nil {
-		log.Fatalf("Error getting TLS client config: %v", err)
-	}
-	Config.TlsClientConfig = clientConfig
-	//Config.TLSConfig = nil
-	return Config
-}
 
 // ------------------------------------------------------------------------
 // Create a new service instance
@@ -71,7 +26,7 @@ func GetNewNxoService() NxoServiceIntf {
 // ------------------------------------------------------------------------
 func (h *NxoService) CallFacade(r *http.Request) error {
 	// Construct the CallFacade API URL
-	facadeURL := h.FacadeURL
+	facadeURL := h.NxoConfig.FacadeURL
 
 	// Modify request headers and body if needed for CallFacade
 	req, err := http.NewRequest(http.MethodGet, facadeURL, nil)
@@ -81,7 +36,7 @@ func (h *NxoService) CallFacade(r *http.Request) error {
 
 	//set the credentials and headers for calling facade api
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authorization", "Basic "+h.FacadeCred)
+	req.Header.Set("Authorization", h.NxoConfig.FacadeAuthType+" "+h.NxoConfig.FacadeCred)
 
 	// HTTPS client <FIXME> try to reuse client
 	client := &http.Client{
@@ -116,7 +71,18 @@ func (h *NxoService) CallFacade(r *http.Request) error {
 // Call iDRAC Endpoints
 // ------------------------------------------------------------------------
 func (h *NxoService) CalliDRAC(w http.ResponseWriter, r *http.Request) ([]byte, error) {
-	proxyURL := h.EOProxyURL + r.URL.Path
+	return []byte("Hello from Nxo proxy client"), nil
+	var proxyURL string
+	var cred string
+	// Determine the iDRAC proxy URL Install type
+	if h.NxoConfig.InstallType == "onprem" {
+		proxyURL = h.NxoConfig.EOProxyURL + r.URL.Path
+		cred = h.NxoConfig.EOProxyAuthType + " " + h.NxoConfig.EOProxyCred
+	} else {
+		proxyURL = h.NxoConfig.SaaSProxyURL + r.URL.Path
+		cred = h.NxoConfig.SaaSProxyAuthType + " " + h.NxoConfig.SaaSProxyCred
+	}
+
 	maxRetry := 3
 
 	// --- Prepare body (for POST/PUT etc). Read once and reuse ---
@@ -159,7 +125,7 @@ func (h *NxoService) CalliDRAC(w http.ResponseWriter, r *http.Request) ([]byte, 
 		}
 		// Set iDRAC-specific headers
 		req.Header.Set("Accept", "application/json")
-		req.Header.Set("Authorization", "Basic "+h.EOProxyCred)
+		req.Header.Set("Authorization", cred)
 
 		// Execute request
 		resp, err := client.Do(req)
@@ -203,27 +169,8 @@ func (h *NxoService) Init() (error error) {
 		}
 	}()
 
-	//Initialize
-	installType := getenv("NXO_INSTALL_TYPE", "onprem")
-	h.InstallType = installType
-
-	//on prem, both facade and proxy are within DSPO
-	h.FacadeCred = getenv("NXO_FACADE_CRED", "admin")
-	h.FacadeURL = getenv("NXO_FACADE_URL", "https://localhost:9000")
-	h.EOProxyCred = getenv("NXO_EOPROXY_CRED", "admin")
-	h.EOProxyURL = getenv("NXO_EOPROXY_URL", "https://localhost:9000")
-
-	//SaaS, facade url is within DSPO , iDRAC proxy is on a different url.
-	if strings.ToLower(installType) != "onprem" {
-		h.EOProxyCred = getenv("NXO_EOPROXY_CRED", "admin")
-		h.EOProxyURL = getenv("NXO_EOPROXY_URL", "https://localhost:9001")
-	}
-
-	//Plugin Service Port
-	h.PLUGINS_PORT = getenv("NXO_PLUGINS_PORT", "8443")
-
 	//Config
-	h.NxoConfig = GetConfig()
+	h.NxoConfig = configs.GetConfig()
 	return nil
 }
 
@@ -231,12 +178,12 @@ func (h *NxoService) Init() (error error) {
 // Start the service
 // ------------------------------------------------------------------------
 func (h *NxoService) Start() error {
-	addr := fmt.Sprintf("%s:%s", "0.0.0.0", h.PLUGINS_PORT)
+	addr := fmt.Sprintf("%s:%s", "0.0.0.0", h.NxoConfig.PLUGINS_PORT)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		//fmt.Fprintf(w, "Hello from service on %s!\n", addr)
-		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(r.Context(), time.Duration(h.NxoConfig.HttpClientTimeout)*time.Second)
 		defer cancel()
 
 		type result struct {
@@ -271,10 +218,10 @@ func (h *NxoService) Start() error {
 		Addr:              addr,
 		Handler:           mux,
 		TLSConfig:         h.NxoConfig.TLSServerConfig,
-		ReadHeaderTimeout: 10 * time.Second,
-		ReadTimeout:       15 * time.Second,
-		WriteTimeout:      30 * time.Second,
-		IdleTimeout:       120 * time.Second,
+		ReadHeaderTimeout: time.Duration(h.NxoConfig.ReadHeaderTimeout) * time.Second,
+		ReadTimeout:       time.Duration(h.NxoConfig.ReadTimeout) * time.Second,
+		WriteTimeout:      time.Duration(h.NxoConfig.WriteTimeout) * time.Second,
+		IdleTimeout:       time.Duration(h.NxoConfig.IdleTimeout) * time.Second,
 	}
 
 	log.Printf("Service starting on %s", addr)
@@ -292,14 +239,4 @@ func (h *NxoService) Stop() error {
 		return fmt.Errorf("error shutting down server: %v", err)
 	}
 	return nil
-}
-
-// ------------------------------------------------------------------------
-// Get env variable or default value
-// ------------------------------------------------------------------------
-func getenv(key string, defaultVal string) string {
-	if value, exists := os.LookupEnv(key); exists {
-		return value
-	}
-	return defaultVal
 }

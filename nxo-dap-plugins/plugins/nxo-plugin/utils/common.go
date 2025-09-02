@@ -44,7 +44,9 @@ func basicConfig(certPath string, keyPath string, caCertPath string) (*tls.Certi
 // Get TLS Server Config
 // ------------------------------------------------------------------------
 func GetTLServerConfig(cert string, key string, cacert string, verify bool) (*tls.Config, error) {
+	fmt.Println("Creating TLS server configuration...")
 	tlsCert, caCertPool, err := basicConfig(cert, key, cacert)
+	fmt.Println("Basic Server TLS configuration created.")
 	if err != nil {
 		return nil, fmt.Errorf("error in ServerConfig, server certs,key,ca missing: %v", err)
 	}
@@ -53,7 +55,7 @@ func GetTLServerConfig(cert string, key string, cacert string, verify bool) (*tl
 	if verify {
 		verifyFlag = tls.RequireAndVerifyClientCert
 	}
-
+	fmt.Println("Client certificate verification set.")
 	// Configure TLS
 	tlsConfig := &tls.Config{
 		MinVersion:   tls.VersionTLS12,
@@ -63,6 +65,7 @@ func GetTLServerConfig(cert string, key string, cacert string, verify bool) (*tl
 		ClientCAs:    caCertPool,
 	}
 	//tlsConfig.BuildNameToCertificate()
+	fmt.Println("TLS server configuration created.")
 	return tlsConfig, nil
 }
 
@@ -81,4 +84,11 @@ func GetTlsClientConfig(cert string, key string, cacert string, _ bool) (*tls.Co
 		RootCAs:      caCertPool,
 	}
 	return tlsConfig, nil
+}
+
+func GetENV(key string, fallback string) string {
+	if val, ok := os.LookupEnv(key); ok {
+		return val
+	}
+	return fallback
 }

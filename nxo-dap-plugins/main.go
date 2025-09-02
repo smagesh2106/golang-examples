@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"golang-examples/nxo-dap-plugins/plugins/nxo-plugin/models"
+	srv "golang-examples/nxo-dap-plugins/plugins/nxo-plugin/service"
 	"log"
 	"os"
 	"os/signal"
@@ -17,13 +17,13 @@ func main() {
 	// Here you would typically start your server, e.g., http.ListenAndServe(fmt.Sprintf("%s:%d", host, port), nil)
 
 	// Start service in goroutine
-	service := models.GetNewNxoService()
+	service := srv.GetNewNxoService()
 	if err := service.Init(); err != nil {
 		log.Fatalf("Failed to initialize service: %v", err)
 	}
 
 	go func() {
-		if err := service.Start(); err != nil && err.Error() != "http: Server closed" {
+		if err := service.Start(); err != nil {
 			log.Fatalf("Service error: %v", err)
 		}
 	}()
