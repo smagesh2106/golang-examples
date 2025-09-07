@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	srv "golang-examples/nxo-dap-plugins/plugins/nxo-plugin/service"
 	"log"
 	"os"
@@ -9,15 +8,10 @@ import (
 	"syscall"
 )
 
-// import "golang-examples/nxo-dap-plugins/plugins/nxo-plugin/service"
 func main() {
-	host := "0.0.0.0"
-	port := "8443"
-	fmt.Printf("Starting server at %s:%d\n", host, port)
-	// Here you would typically start your server, e.g., http.ListenAndServe(fmt.Sprintf("%s:%d", host, port), nil)
-
 	// Start service in goroutine
 	service := srv.GetNewNxoService()
+
 	if err := service.Init(); err != nil {
 		log.Fatalf("Failed to initialize service: %v", err)
 	}

@@ -225,7 +225,7 @@ func (h *NxoService) Start() error {
 		IdleTimeout:       time.Duration(h.NxoConfig.IdleTimeout) * time.Second,
 	}
 
-	log.Printf("Service starting on %s", addr)
+	log.Printf("Service starting at: %s", addr)
 	return h.Server.ListenAndServeTLS(h.NxoConfig.ServerCert, h.NxoConfig.ServerKey)
 }
 
