@@ -1,0 +1,8 @@
+---
+AgentPlugins:
+  - name: GreeterPluginInstance1
+    description: "This is plugin 1"
+    path: plugins/plugin1.so
+  - name: GreeterPluginInstance2
+    description: "This is plugin 2"
+    path: plugins/plugin2.so
