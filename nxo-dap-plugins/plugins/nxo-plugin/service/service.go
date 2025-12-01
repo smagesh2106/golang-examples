@@ -71,8 +71,8 @@ func (h *NxoService) CallFacade(r *http.Request) error {
 // Call iDRAC Endpoints
 // ------------------------------------------------------------------------
 func (h *NxoService) CalliDRAC(w http.ResponseWriter, r *http.Request) ([]byte, error) {
-	return []byte("Hello from Nxo proxy client"), nil //<FIXME> remove
-
+	//return []byte("Hello from Nxo proxy client"), nil //<FIXME> remove
+	fmt.Println("-----1----")
 	var proxyURL string
 	var cred string
 	// Determine the iDRAC proxy URL Install type
@@ -83,7 +83,7 @@ func (h *NxoService) CalliDRAC(w http.ResponseWriter, r *http.Request) ([]byte, 
 		proxyURL = h.NxoConfig.SaaSProxyURL + r.URL.Path
 		cred = h.NxoConfig.SaaSProxyAuthType + " " + h.NxoConfig.SaaSProxyCred
 	}
-
+	fmt.Println("-----2----")
 	maxRetry := 3
 
 	// --- Prepare body (for POST/PUT etc). Read once and reuse ---
@@ -96,7 +96,7 @@ func (h *NxoService) CalliDRAC(w http.ResponseWriter, r *http.Request) ([]byte, 
 		}
 		r.Body.Close()
 	}
-
+	fmt.Println("-----3----")
 	// HTTPS client <FIXME> try to reuse client
 	client := &http.Client{
 		Timeout: time.Duration(h.NxoConfig.HttpClientTimeout) * time.Second,
@@ -104,6 +104,24 @@ func (h *NxoService) CalliDRAC(w http.ResponseWriter, r *http.Request) ([]byte, 
 			TLSClientConfig: h.NxoConfig.TlsClientConfig,
 		},
 	}
+	fmt.Println("-----4----")
+	cloneTransport := client.Transport.(*http.Transport).Clone()
+	sub := cloneTransport.TLSClientConfig.Certificates
+	certs := sub[0].Certificate[0]
+	for _, subject := range certs {
+		fmt.Printf("%v", string(subject))
+	} /*
+		fmt.Printf("---->%v\n", subject)
+		var certData map[string]interface{}
+		_, err := asn1.Unmarshal(subject, &certData)
+		if err != nil {
+			fmt.Printf("Error unmarshaling certificate: %v\n", err)
+		} else {
+			certJSON, _ := json.MarshalIndent(certData, "", "  ")
+			fmt.Printf("Certificate Data: %s\n", certJSON)
+		}
+	*/
+	//fmt.Printf("---->%v\n", cloneTransport.TLSClientConfig.Certificates[0].([]tls.Certificate))
 
 	// Retry logic
 	for attempt := 1; attempt <= maxRetry; attempt++ {
